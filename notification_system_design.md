@@ -464,3 +464,199 @@ AND is_read = false
 ORDER BY created_at DESC
 LIMIT 20;
 ```
+---
+
+# Stage 4
+
+## Problem Statement
+
+Currently, every time the frontend loads notifications, the backend directly queries the database.
+
+As the number of users increases, this approach can create:
+
+1. High database load
+2. Increased response times
+3. Slow user experience
+4. Higher infrastructure cost
+5. Reduced scalability
+
+---
+
+# Performance Improvement Strategies
+
+## 1. Redis Caching
+
+Frequently accessed notifications can be stored in Redis cache.
+
+### Workflow
+
+1. Frontend requests notifications
+2. Backend checks Redis cache
+3. If cache exists → return cached data
+4. Otherwise:
+   - fetch from PostgreSQL
+   - store in Redis
+   - return response
+
+---
+
+### Advantages
+
+- Faster response time
+- Reduced database queries
+- Better scalability
+- Lower DB server load
+
+---
+
+### Tradeoffs
+
+- Cache invalidation complexity
+- Additional memory usage
+- Possible stale data
+
+---
+
+## 2. Pagination
+
+Instead of fetching all notifications at once, fetch smaller batches.
+
+### Example
+
+```http
+GET /notifications?page=1&limit=20
+```
+
+### Advantages
+
+- Reduced response size
+- Faster API responses
+- Lower memory usage
+- Better frontend rendering performance
+
+---
+
+## 3. Lazy Loading
+
+Notifications are loaded only when required by the user.
+
+### Example
+
+Load more notifications while scrolling.
+
+### Advantages
+
+- Improved frontend performance
+- Reduced unnecessary API calls
+
+---
+
+## 4. WebSockets for Real-Time Updates
+
+Instead of repeatedly polling APIs, WebSockets can push notifications instantly.
+
+### Technologies
+
+- Socket.io
+- WebSockets
+
+### Advantages
+
+- Real-time updates
+- Reduced API polling
+- Better user experience
+
+---
+
+## 5. Database Read Replicas
+
+Read replicas can distribute read-heavy traffic across multiple DB servers.
+
+### Advantages
+
+- Reduced load on primary database
+- Improved scalability
+- Better availability
+
+---
+
+## 6. Connection Pooling
+
+Database connection pooling reuses DB connections efficiently.
+
+### Advantages
+
+- Reduced connection overhead
+- Faster query execution
+- Better resource utilization
+
+---
+
+# Example Optimized Architecture
+
+```text
+Frontend
+   ↓
+Backend API Server
+   ↓
+Redis Cache
+   ↓
+PostgreSQL Database
+```
+
+For real-time updates:
+
+```text
+Backend
+   ↓
+Socket.io Server
+   ↓
+Connected Clients
+```
+
+---
+
+# Additional Improvements
+
+## Compression
+
+API responses can be compressed using gzip.
+
+---
+
+## Rate Limiting
+
+Prevent excessive API requests from clients.
+
+---
+
+## Monitoring
+
+Use monitoring tools to track:
+- API latency
+- DB performance
+- Error rates
+- Cache hit ratio
+
+---
+
+# Final Scalable Flow
+
+1. Client requests notifications
+2. Backend checks Redis
+3. Cached response returned if available
+4. Otherwise fetch from DB
+5. Store response in Redis
+6. Send data to client
+7. Real-time notifications pushed via WebSockets
+
+---
+
+# Conclusion
+
+Using caching, pagination, lazy loading, WebSockets, and DB optimization significantly improves:
+
+- Scalability
+- Performance
+- User experience
+- Reliability
