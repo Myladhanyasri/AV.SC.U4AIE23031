@@ -660,3 +660,209 @@ Using caching, pagination, lazy loading, WebSockets, and DB optimization signifi
 - Performance
 - User experience
 - Reliability
+
+
+---
+
+# Stage 5
+
+## Existing Notification Sending Approach
+
+```python
+for student in students:
+    send_email(student)
+    save_notification(student)
+```
+
+---
+
+## Problems with the Existing Approach
+
+The current implementation processes notifications sequentially.
+
+### Issues
+
+1. Slow processing for large numbers of students
+2. One failure can interrupt the entire process
+3. High response time
+4. Poor scalability
+5. Inefficient resource utilization
+6. Email API delays affect overall performance
+
+---
+
+# Scalable Notification Architecture
+
+To improve scalability and reliability, asynchronous processing with message queues should be used.
+
+---
+
+## Recommended Architecture
+
+```text
+Admin/API Request
+        ↓
+Notification Service
+        ↓
+Message Queue (RabbitMQ / Kafka)
+        ↓
+Worker Services
+   ↙              ↘
+Save to DB      Send Email
+```
+
+---
+
+# Workflow
+
+1. Notification request is received
+2. Notification job is added to queue
+3. Worker services process jobs asynchronously
+4. Notifications are saved to database
+5. Emails are sent independently
+6. Failed jobs are retried automatically
+
+---
+
+# Advantages of Queue-Based Architecture
+
+## 1. Improved Scalability
+
+Multiple workers can process notifications in parallel.
+
+---
+
+## 2. Faster API Response
+
+API immediately returns after adding jobs to queue.
+
+---
+
+## 3. Fault Tolerance
+
+Failures in one worker do not stop the entire system.
+
+---
+
+## 4. Retry Mechanism
+
+Failed email jobs can be retried automatically.
+
+---
+
+## 5. Better Resource Utilization
+
+Background workers efficiently process heavy tasks.
+
+---
+
+# Sample Optimized Pseudocode
+
+## Producer Service
+
+```python
+function send_notifications(student_ids, message):
+
+    for student_id in student_ids:
+
+        queue.publish({
+            "student_id": student_id,
+            "message": message
+        })
+
+    return "Notifications queued successfully"
+```
+
+---
+
+## Worker Service
+
+```python
+while True:
+
+    job = queue.consume()
+
+    save_notification_to_db(job)
+
+    try:
+        send_email(job)
+    except:
+        retry_job(job)
+```
+
+---
+
+# Why Save to DB and Send Email Separately?
+
+Saving notifications and sending emails should not happen in the same transaction because:
+
+1. Email APIs are external services
+2. External APIs may fail or timeout
+3. Database operations should remain reliable
+4. Failed emails can be retried independently
+
+This separation improves system reliability and fault tolerance.
+
+---
+
+# Additional Improvements
+
+## 1. Batch Processing
+
+Process notifications in batches for improved performance.
+
+---
+
+## 2. Dead Letter Queue
+
+Failed jobs after multiple retries can be moved to a dead-letter queue for monitoring.
+
+---
+
+## 3. Monitoring and Logging
+
+Track:
+- failed jobs
+- queue size
+- email delivery status
+- worker health
+
+---
+
+# Technologies That Can Be Used
+
+| Purpose | Technology |
+|---|---|
+| Queue System | RabbitMQ / Kafka |
+| Backend | Node.js / Express |
+| Email Service | Nodemailer |
+| Database | PostgreSQL |
+| Cache | Redis |
+
+---
+
+# Final Scalable Flow
+
+```text
+Frontend/Admin
+      ↓
+Backend API
+      ↓
+Queue System
+      ↓
+Worker Services
+   ↙           ↘
+Database      Email Service
+```
+
+---
+
+# Conclusion
+
+Using asynchronous queues and worker-based processing significantly improves:
+
+- Scalability
+- Reliability
+- Performance
+- Fault tolerance
+- User experience
