@@ -166,3 +166,158 @@ Advantages:
 - Plural resource naming
 - JSON response structure
 - HTTP status codes for responses
+
+
+---
+
+# Stage 2
+
+## Database Choice
+
+The recommended database for the notification system is PostgreSQL.
+
+### Reasons for Choosing PostgreSQL
+
+1. Strong support for relational data
+2. Efficient indexing and querying
+3. ACID compliance for reliable transactions
+4. Supports pagination, filtering, and sorting efficiently
+5. Scalable for large datasets
+6. Good support for concurrent users
+
+---
+
+## Database Schema
+
+### Notifications Table
+
+```sql
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY,
+    student_id INT NOT NULL,
+    type VARCHAR(20) NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+---
+
+## Explanation of Fields
+
+| Column | Description |
+|---|---|
+| id | Unique notification ID |
+| student_id | Student receiving notification |
+| type | Notification type (Placement/Event/Result) |
+| message | Notification content |
+| is_read | Read status |
+| created_at | Notification creation timestamp |
+
+---
+
+## Supported Notification Types
+
+- Placement
+- Event
+- Result
+
+---
+
+## Recommended Indexes
+
+```sql
+CREATE INDEX idx_student_id
+ON notifications(student_id);
+
+CREATE INDEX idx_is_read
+ON notifications(is_read);
+
+CREATE INDEX idx_created_at
+ON notifications(created_at);
+```
+
+---
+
+## Sample SQL Queries
+
+### Fetch Notifications
+
+```sql
+SELECT *
+FROM notifications
+WHERE student_id = 1042
+ORDER BY created_at DESC
+LIMIT 20;
+```
+
+---
+
+### Fetch Unread Notifications
+
+```sql
+SELECT *
+FROM notifications
+WHERE student_id = 1042
+AND is_read = false;
+```
+
+---
+
+### Mark Notification as Read
+
+```sql
+UPDATE notifications
+SET is_read = true
+WHERE id = 'notification-id';
+```
+
+---
+
+## Problems as Data Volume Increases
+
+As the number of notifications grows to millions of records, the following issues may occur:
+
+1. Slow query performance
+2. Increased database load
+3. Large table scans
+4. Delayed API responses
+5. Higher memory consumption
+
+---
+
+## Solutions for Scalability
+
+### 1. Database Indexing
+
+Indexes improve filtering and sorting performance.
+
+### 2. Pagination
+
+Fetching limited records reduces response size and DB load.
+
+### 3. Caching
+
+Redis can be used to cache frequently accessed notifications.
+
+### 4. Table Partitioning
+
+Partitioning notifications by date improves query performance.
+
+### 5. Read Replicas
+
+Read replicas help distribute database read traffic.
+
+---
+
+## API and DB Relationship
+
+The REST APIs designed in Stage 1 interact with the database as follows:
+
+| API | DB Operation |
+|---|---|
+| GET /notifications | SELECT |
+| POST /notifications | INSERT |
+| PATCH /notifications/:id/read | UPDATE |
+| GET /notifications/unread | SELECT |
