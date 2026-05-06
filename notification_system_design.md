@@ -321,3 +321,146 @@ The REST APIs designed in Stage 1 interact with the database as follows:
 | POST /notifications | INSERT |
 | PATCH /notifications/:id/read | UPDATE |
 | GET /notifications/unread | SELECT |
+
+---
+
+# Stage 3
+
+## Existing Query
+
+```sql
+SELECT *
+FROM notifications
+WHERE student_id = 1042
+AND is_read = false
+ORDER BY created_at ASC;
+```
+
+---
+
+## Problems with the Query
+
+The query may become slow as the notifications table grows to millions of rows.
+
+### Reasons
+
+1. `SELECT *` fetches unnecessary columns and increases data transfer.
+
+2. Missing composite indexes may force full table scans.
+
+3. Sorting using `ORDER BY created_at` becomes expensive on large datasets.
+
+4. Fetching all unread notifications without pagination increases response size and memory usage.
+
+---
+
+## Optimized Approach
+
+### 1. Fetch Only Required Columns
+
+```sql
+SELECT id, type, message, created_at
+FROM notifications
+WHERE student_id = 1042
+AND is_read = false
+ORDER BY created_at DESC
+LIMIT 20;
+```
+
+Advantages:
+- Reduced network transfer
+- Lower memory usage
+- Faster query execution
+
+---
+
+## Recommended Composite Index
+
+```sql
+CREATE INDEX idx_notifications_student_read_created
+ON notifications(student_id, is_read, created_at DESC);
+```
+
+### Why Composite Index?
+
+This index improves:
+- Filtering by `student_id`
+- Filtering unread notifications
+- Sorting by `created_at`
+
+without requiring additional sorting operations.
+
+---
+
+## Why Adding Indexes on Every Column is Not Effective
+
+Adding indexes on every column is not recommended because:
+
+1. Increased storage usage
+2. Slower INSERT and UPDATE operations
+3. Higher index maintenance overhead
+4. Unused indexes waste resources
+
+Indexes should only be created for frequently filtered or sorted columns.
+
+---
+
+## Query to Fetch Placement Notifications
+
+```sql
+SELECT id, student_id, type, message, created_at
+FROM notifications
+WHERE type = 'Placement'
+ORDER BY created_at DESC;
+```
+
+---
+
+## Additional Optimizations
+
+### 1. Pagination
+
+```sql
+LIMIT 20 OFFSET 0;
+```
+
+Helps reduce database load and response size.
+
+---
+
+### 2. Caching
+
+Frequently accessed unread notifications can be cached using Redis.
+
+---
+
+### 3. Partitioning
+
+Notifications can be partitioned based on creation date for faster querying.
+
+---
+
+## Estimated Computational Cost
+
+### Without Proper Index
+
+- Time Complexity: O(n)
+- Requires full table scan
+
+### With Composite Index
+
+- Time Complexity: O(log n)
+- Faster filtering and sorting
+
+---
+
+## Final Optimized Query
+
+```sql
+SELECT id, type, message, created_at
+FROM notifications
+WHERE student_id = 1042
+AND is_read = false
+ORDER BY created_at DESC
+LIMIT 20;
+```
